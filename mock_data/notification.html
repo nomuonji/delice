@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Notification Mock</title>
+</head>
+<body>
+    <ul class="notification-list">
+        <!-- Target Item -->
+        <li class="notification-item">
+            <div class="content">
+                <p>
+                    ▼無修正紹介動画▼
+                    <br>
+                    https://delice.love/movie/55782?openExternalBrowser=1
+                    <br>
+                    名前：野口めい
+                    <br>
+                    年齢：27
+                    <br>
+                    身長：164
+                    <br>
+                    バスト：F
+                </p>
+                <span class="date">2023-10-27 10:00</span>
+            </div>
+        </li>
+        <!-- Irrelevant Item -->
+        <li class="notification-item">
+            <div class="content">
+                <p>他の通知です。</p>
+            </div>
+        </li>
+         <!-- Target Item with slightly different formatting (inline) -->
+         <li class="notification-item">
+            <div class="content">
+                <p>▼無修正紹介動画▼ https://delice.love/movie/99999?openExternalBrowser=1 名前：テスト花子 年齢：22 身長：155 バスト：C</p>
+            </div>
+        </li>
+    </ul>
+</body>
+</html>
