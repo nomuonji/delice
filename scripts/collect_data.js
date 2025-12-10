@@ -66,12 +66,6 @@ async function saveData(data) {
         await page.goto(NOTIFICATION_URL);
         await page.waitForTimeout(5000);
 
-        // DEBUG: Verify page state
-        await page.screenshot({ path: path.join(__dirname, '../debug_collect.png') });
-        const content = await page.content();
-        fs.writeFileSync(path.join(__dirname, '../debug_collect.html'), content);
-        console.log('Saved debug_collect.png and debug_collect.html');
-
         // Extract data from __NEXT_DATA__
         const nextData = await page.evaluate(() => {
             const script = document.getElementById('__NEXT_DATA__');
