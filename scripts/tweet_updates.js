@@ -61,7 +61,10 @@ async function saveData(data) {
     // Given the "notifications" nature, usually you want them out fast. 
     // Let's try to empty the queue but with error handling.
 
-    for (const item of untweetedItems) {
+    // Tweet only ONE item per execution to act as a drip feed
+    const item = untweetedItems[0];
+
+    if (item) {
         const tweetText = `▼無修正紹介動画▼\n\n名前：${item.name}\n年齢：${item.age}\n身長：${item.height}\nバスト：${item.bust}\n\n${item.link}`;
 
         try {
@@ -75,22 +78,14 @@ async function saveData(data) {
                 // Mark as tweeted
                 item.tweeted_at = new Date().toISOString();
 
-                // Save immediately to avoid double tweeting if crash happens later
+                // Save immediately
                 await saveData(items);
-
-                // Wait a bit to avoid rate limits if we loop
-                await new Promise(r => setTimeout(r, 2000));
             } else {
                 console.log('[DRY RUN] Tweet content:\n' + tweetText);
-                // In dry run, we DO NOT mark as tweeted so we can test again, 
-                // UNLESS we want to simulate the flow. 
-                // Let's NOT mark it so the user can test repeatedly.
             }
 
         } catch (e) {
             console.error('Failed to tweet:', e);
-            // If error is duplicate content, maybe mark as tweeted? 
-            // For now, leave it retryable.
         }
     }
 
