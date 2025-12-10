@@ -35,20 +35,30 @@ async function saveData(data) {
         process.exit(1);
     }
 
-    // Restore auth.json from env var if it exists (prioritize env var)
+    let storageState = undefined;
+
+    // Restore auth state from env var (memory only, no file write)
     if (process.env.AUTH_JSON_BASE64) {
         try {
             const buffer = Buffer.from(process.env.AUTH_JSON_BASE64, 'base64');
-            fs.writeFileSync(AUTH_FILE, buffer);
-            console.log('Restored auth.json from environment variable.');
+            storageState = JSON.parse(buffer.toString('utf8'));
+            console.log('Restored auth state from environment variable (in-memory).');
         } catch (e) {
             console.error('Failed to decode AUTH_JSON_BASE64:', e);
             process.exit(1);
         }
+    } else if (fs.existsSync(AUTH_FILE)) {
+        // Fallback to file if it exists (local dev)
+        console.log('Using local auth.json file.');
+        storageState = AUTH_FILE;
+    } else {
+        console.error('Auth session not found! Set AUTH_JSON_BASE64 env var or run "npm run auth".');
+        process.exit(1);
     }
 
     const browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ storageState: AUTH_FILE });
+    // Pass storageState object directly
+    const context = await browser.newContext({ storageState: storageState });
     const page = await context.newPage();
 
     try {
