@@ -26,20 +26,11 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
 
-      - name: Restore Auth Session
-        id: auth
-        env:
-          AUTH_JSON_BASE64: ${{ secrets.AUTH_JSON_BASE64 }}
-        run: |
-          if [ -n "$AUTH_JSON_BASE64" ]; then
-            echo "$AUTH_JSON_BASE64" | base64 -d > auth.json
-          elif [ -f "auth.json" ]; then
-            echo "Used existing auth.json"
-          else
-            echo "No auth.json found!"
-          fi
-
       - name: Run Collector
+        env:
+          GAS_DB_API_URL: ${{ secrets.GAS_DB_API_URL }}
+          DELICE_EMAIL: ${{ secrets.DELICE_EMAIL }}
+          DELICE_PASSWORD: ${{ secrets.DELICE_PASSWORD }}
         run: npm run collect
 
       - name: Commit Data
