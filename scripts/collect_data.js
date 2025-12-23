@@ -1,6 +1,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
+const gas = require('./gas_db');
 
 const AUTH_FILE = path.join(__dirname, '../auth.json');
 const DATA_FILE = path.join(__dirname, '../data/items.json');
@@ -29,42 +30,166 @@ async function saveData(data) {
 
     require('dotenv').config();
 
-    // Check for auth info in Env or File
-    if (!process.env.AUTH_JSON_BASE64 && !fs.existsSync(AUTH_FILE)) {
-        console.error('Auth session not found! Set AUTH_JSON_BASE64 env var or run "npm run auth".');
-        process.exit(1);
-    }
+    // Authenticate using GAS DB Data
+    console.log('Fetching auth session from GAS DB...');
+    const result = await gas.getTableData('threads_auth'); // Using the same table name as agreed
+    const RECORD_ID = 'delice_website_session';
 
     let storageState = undefined;
+    let authRecord = null;
 
-    // Restore auth state from env var (memory only, no file write)
-    if (process.env.AUTH_JSON_BASE64) {
-        try {
-            const buffer = Buffer.from(process.env.AUTH_JSON_BASE64, 'base64');
-            storageState = JSON.parse(buffer.toString('utf8'));
-            console.log('Restored auth state from environment variable (in-memory).');
-        } catch (e) {
-            console.error('Failed to decode AUTH_JSON_BASE64:', e);
-            process.exit(1);
-        }
-    } else if (fs.existsSync(AUTH_FILE)) {
-        // Fallback to file if it exists (local dev)
-        console.log('Using local auth.json file.');
-        storageState = AUTH_FILE;
-    } else {
-        console.error('Auth session not found! Set AUTH_JSON_BASE64 env var or run "npm run auth".');
-        process.exit(1);
+    if (result && result.data && Array.isArray(result.data)) {
+        authRecord = result.data.find(r => r.id === RECORD_ID);
+    } else if (Array.isArray(result)) {
+        // Fallback for different response structures
+        authRecord = result.find(r => r.id === RECORD_ID);
     }
 
+    if (authRecord && authRecord.access_token) {
+        try {
+            storageState = JSON.parse(authRecord.access_token);
+            console.log('Successfully loaded auth session from GAS DB.');
+        } catch (e) {
+            console.error('Failed to parse auth data from GAS DB:', e.message);
+            // Fallback to local auth.json if strictly needed, but better to fail if remote auth is expected
+        }
+    } else {
+        console.warn('Auth record not found in GAS DB. Checking local file...');
+    }
+
+    // Fallback: Check for local auth.json
+    if (!storageState && fs.existsSync(AUTH_FILE)) {
+        console.log('Using local auth.json file.');
+        storageState = AUTH_FILE;
+    }
+
+    // We launch browser anyway; if no state, it's a fresh session that will likely fail auth check and trigger login
     const browser = await chromium.launch({ headless: true });
-    // Pass storageState object directly
-    const context = await browser.newContext({ storageState: storageState });
-    const page = await context.newPage();
+
+    // Login Function
+    async function performLogin(browserInstance) {
+        console.log('Performing automated login...');
+
+        if (!process.env.DELICE_EMAIL || !process.env.DELICE_PASSWORD) {
+            throw new Error('DELICE_EMAIL and DELICE_PASSWORD must be set in env for auto-login.');
+        }
+
+        const loginContext = await browserInstance.newContext();
+        const loginPage = await loginContext.newPage();
+
+        try {
+            // Adjust login URL as needed (assuming standard login page or flow)
+            await loginPage.goto('https://delice.love/login'); // Default guess or use top page
+
+            // Wait for inputs
+            // Try to find selectors - common ones are input[type="text"], input[type="password"]
+            // Or specific names if known. Giving best effort based on "delice.love".
+            // If it redirects to top or has button, handle it.
+
+            // Let's assume standard form
+            // Check if we are already logged in? (unlikely if called here)
+
+            // Fill form
+            // NOTE: Selectors are GUESSES. If site structure is specific, user might need to adjust.
+            // Using generic robust selectors if possible.
+            // Actually, for "delice.love", it might be a button click to open modal or separate page.
+
+            // Waiting for login form elements
+            // IMPORTANT: User provided 'ちょんまげ' as Username and 'EwezZDZck3' as Password.
+            // Often sites use Email address. But here user said Username.
+
+            // Handle possible age verification modal which blocks interaction
+            try {
+                const agreeButton = loginPage.locator('button:has-text("同意する")');
+                if (await agreeButton.isVisible({ timeout: 5000 })) {
+                    console.log('Found age verification modal. Clicking "Agree"...');
+                    await agreeButton.click();
+                    await loginPage.waitForTimeout(1000);
+                }
+            } catch (e) {
+                console.log('No age verification modal found or interactable.');
+            }
+
+            const usernameInput = loginPage.locator('input[name="tel"]').first();
+            const passwordInput = loginPage.locator('input[name="password"]').first();
+            const submitButton = loginPage.locator('button[type="submit"]').first();
+
+            await usernameInput.fill(process.env.DELICE_EMAIL);
+            await passwordInput.fill(process.env.DELICE_PASSWORD);
+            await submitButton.click();
+
+            await loginPage.waitForNavigation({ waitUntil: 'networkidle' });
+
+            // Check success? 
+            // Save state
+            const newState = await loginContext.storageState();
+
+            // Upload to GAS DB
+            console.log('Login successful. Saving new session to GAS DB...');
+            const jsonStr = JSON.stringify(newState);
+
+            if (authRecord) {
+                await gas.updateRecord('threads_auth', RECORD_ID, {
+                    access_token: jsonStr,
+                    last_updated: new Date().toISOString()
+                });
+            } else {
+                await gas.createRecord('threads_auth', {
+                    id: RECORD_ID,
+                    access_token: jsonStr,
+                    last_updated: new Date().toISOString()
+                });
+            }
+
+            return newState;
+
+        } catch (e) {
+            console.error('Auto-login failed:', e);
+            throw e;
+        } finally {
+            await loginContext.close();
+        }
+    }
+
+    let context = await browser.newContext({ storageState: storageState });
+    let page = await context.newPage();
 
     try {
         console.log(`Navigating to ${NOTIFICATION_URL}`);
-        await page.goto(NOTIFICATION_URL);
+        const response = await page.goto(NOTIFICATION_URL);
         await page.waitForTimeout(5000);
+
+        // Check for redirect to login or auth failure
+        const url = page.url();
+        console.log('Current URL:', url);
+
+        let needsLogin = false;
+        if (url.includes('/login') || url.includes('signin')) {
+            needsLogin = true;
+        }
+
+        // Also check if __NEXT_DATA__ exists (if not, maybe not logged in properly or error page)
+        const hasNextData = await page.evaluate(() => !!document.getElementById('__NEXT_DATA__'));
+
+        if (!hasNextData && !needsLogin) {
+            console.warn('Page loaded but __NEXT_DATA__ missing. Possible auth issue.');
+            needsLogin = true;
+        }
+
+        if (needsLogin) {
+            console.log('Session expired or invalid. Initiating auto-login...');
+            await context.close(); // Close old context
+
+            const newState = await performLogin(browser);
+
+            // Re-open context with new state
+            context = await browser.newContext({ storageState: newState });
+            page = await context.newPage();
+
+            console.log(`Retrying navigation to ${NOTIFICATION_URL}`);
+            await page.goto(NOTIFICATION_URL);
+            await page.waitForTimeout(5000);
+        }
 
         // Extract data from __NEXT_DATA__
         const nextData = await page.evaluate(() => {

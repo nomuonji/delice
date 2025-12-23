@@ -1,7 +1,7 @@
 const gas = require('./gas_db');
 require('dotenv').config();
 
-const NEW_TOKEN = process.env.THREADS_NEW_TOKEN;
+const NEW_TOKEN = process.env.THREADS_INITIAL_TOKEN;
 const TABLE_NAME = 'threads_auth';
 
 (async () => {
