@@ -116,7 +116,8 @@ async function saveData(data) {
 
             await usernameInput.fill(process.env.DELICE_EMAIL);
             await passwordInput.fill(process.env.DELICE_PASSWORD);
-            await submitButton.click();
+            // Force click to bypass potential overlays (cookie banners, etc.)
+            await submitButton.click({ force: true });
 
             await loginPage.waitForNavigation({ waitUntil: 'networkidle' });
 
