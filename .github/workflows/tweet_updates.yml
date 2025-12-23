@@ -36,8 +36,14 @@ jobs:
           GAS_DB_API_URL: ${{ secrets.GAS_DB_API_URL }}
         run: npm run threads
 
-      - name: Commit Status
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Update items.json status [skip ci]"
-          file_pattern: data/items.json
+      - name: Commit and Push Status
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add data/items.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update items.json status [skip ci]"
+            git push
+          fi

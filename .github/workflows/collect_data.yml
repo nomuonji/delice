@@ -33,8 +33,14 @@ jobs:
           DELICE_PASSWORD: ${{ secrets.DELICE_PASSWORD }}
         run: npm run collect
 
-      - name: Commit Data
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Update items.json [skip ci]"
-          file_pattern: data/items.json
+      - name: Commit and Push Data
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add data/items.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update items.json [skip ci]"
+            git push
+          fi
