@@ -67,7 +67,7 @@ async function saveData(data) {
     if (item) {
         const inviterId = '7576d561-2573-4396-89d0-974bdb625f46';
         const link = item.link.includes('?') ? `${item.link}&inviter_id=${inviterId}` : `${item.link}?inviter_id=${inviterId}`;
-        const tweetText = `▼無修正紹介動画▼\n\n名前：${item.name}\n年齢：${item.age}\n身長：${item.height}\nバスト：${item.bust}\n\n${link}`;
+        const tweetText = `▼紹介動画▼\n\n名前：${item.name}\n年齢：${item.age}\n身長：${item.height}\nバスト：${item.bust}\n\n${link}`;
 
         try {
             console.log('------------------------------------------------');
