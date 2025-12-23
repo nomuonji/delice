@@ -134,6 +134,15 @@ async function saveData(data) {
             }
         }
 
+        // Limit to last 500 items to prevent infinite growth
+        if (currentItems.length > 500) {
+            console.log('Trimming items to last 500...');
+            // In case we want to be extra safe and only trim processed ones, we could do more complex logic.
+            // But 500 is plenty of buffer (20+ days of backlog).
+            // We strip from the start (oldest).
+            currentItems.splice(0, currentItems.length - 500);
+        }
+
         await saveData(currentItems);
         console.log(`Collection complete. Added ${addedCount} new items. Total items: ${currentItems.length}`);
 

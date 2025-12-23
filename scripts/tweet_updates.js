@@ -61,8 +61,8 @@ async function saveData(data) {
     // Given the "notifications" nature, usually you want them out fast. 
     // Let's try to empty the queue but with error handling.
 
-    // Tweet only ONE item per execution to act as a drip feed
-    const item = untweetedItems[0];
+    // Tweet only ONE item per execution to act as a drip feed (Newest first)
+    const item = untweetedItems[untweetedItems.length - 1];
 
     if (item) {
         const inviterId = '7576d561-2573-4396-89d0-974bdb625f46';

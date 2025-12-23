@@ -1,12 +1,12 @@
-name: Tweet Updates
+name: Publish Updates
 
 on:
   schedule:
-    - cron: '45 * * * *' # Every hour at minute 45 (30 mins after collection)
+    - cron: '45 0-16/2 * * *' # UTC 0-14/2 (JST 9:00-23:00, every 2 hours)
   workflow_dispatch:
 
 jobs:
-  tweet:
+  publish:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -30,6 +30,11 @@ jobs:
           TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
           TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
         run: npm run tweet
+
+      - name: Run Threads Poster
+        env:
+          GAS_DB_API_URL: ${{ secrets.GAS_DB_API_URL }}
+        run: npm run threads
 
       - name: Commit Status
         uses: stefanzweifel/git-auto-commit-action@v5
