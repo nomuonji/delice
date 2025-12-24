@@ -1,12 +1,14 @@
-name: Publish Updates
+name: Tweet Queue
 
 on:
   schedule:
-    - cron: '45 0-16/4 * * *' # UTC 0-16/4 (JST 9:00-25:00, every 4 hours)
+    # UTC 2-18/4 (JST 11:00, 15:00, 19:00, 23:00, 03:00)
+    # tweet_updates.ymlの2時間後にオフセット (既存: 0-16/4 = JST 9,13,17,21,25)
+    - cron: '45 2-18/4 * * *'
   workflow_dispatch:
 
 jobs:
-  publish:
+  tweet-queue:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -23,27 +25,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Tweeter
+      - name: Tweet from Queue
         env:
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
           TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
           TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
           TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
-        run: npm run tweet
-
-      - name: Run Threads Poster
-        env:
-          GAS_DB_API_URL: ${{ secrets.GAS_DB_API_URL }}
-        run: npm run threads
+        run: npm run tweet-queue
 
       - name: Commit and Push Status
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add data/items.json
+          git add data/tweets_status.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update items.json status [skip ci]"
+            git commit -m "Update tweets_status.json [skip ci]"
             git push
           fi

@@ -8,6 +8,7 @@
         "collect": "node scripts/collect_data.js",
         "tweet": "node scripts/tweet_updates.js",
         "threads": "node scripts/threads_updates.js",
+        "tweet-queue": "node scripts/tweet_from_queue.js",
         "all": "npm run collect && npm run tweet && npm run threads"
     },
     "dependencies": {
