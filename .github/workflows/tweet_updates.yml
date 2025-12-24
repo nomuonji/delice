@@ -2,7 +2,7 @@ name: Publish Updates
 
 on:
   schedule:
-    - cron: '45 0-16/2 * * *' # UTC 0-14/2 (JST 9:00-23:00, every 2 hours)
+    - cron: '45 0-16/4 * * *' # UTC 0-14/2 (JST 9:00-23:00, every 2 hours)
   workflow_dispatch:
 
 jobs:
