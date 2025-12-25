@@ -85,7 +85,7 @@
     "bust": "B",
     "notification_date": "2025-12-20 16:13:36",
     "collected_at": "2025-12-23T19:36:05.288Z",
-    "tweeted_at": null
+    "tweeted_at": "2025-12-25T01:11:15.112Z"
   },
   {
     "id": "https://delice.love/movie/57170?openExternalBrowser=1",
@@ -107,7 +107,8 @@
     "bust": "D",
     "notification_date": "2025-12-19 19:40:28",
     "collected_at": "2025-12-23T19:36:05.288Z",
-    "tweeted_at": "2025-12-24T13:01:58.144Z"
+    "tweeted_at": "2025-12-24T13:01:58.144Z",
+    "threads_posted_at": "2025-12-25T01:11:28.720Z"
   },
   {
     "id": "https://delice.love/movie/57112?openExternalBrowser=1",
