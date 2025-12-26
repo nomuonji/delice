@@ -2,7 +2,7 @@ name: Collect Data
 
 on:
   schedule:
-    - cron: '15 * * * *' # Every hour at minute 15
+    - cron: '15 0 * * *' # Every hour at minute 15
   workflow_dispatch:
 
 jobs:
