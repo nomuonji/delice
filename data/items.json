@@ -218,5 +218,38 @@
     "collected_at": "2025-12-25T11:26:21.880Z",
     "tweeted_at": "2025-12-25T13:02:12.712Z",
     "threads_posted_at": "2025-12-26T01:11:16.728Z"
+  },
+  {
+    "id": "https://delice.love/movie/58062?openExternalBrowser=1",
+    "link": "https://delice.love/movie/58062?openExternalBrowser=1",
+    "name": "猪野ひとみ",
+    "age": "23",
+    "height": "153",
+    "bust": "D",
+    "notification_date": "2025-12-26 20:59:34",
+    "collected_at": "2025-12-27T00:41:58.873Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/57615?openExternalBrowser=1",
+    "link": "https://delice.love/movie/57615?openExternalBrowser=1",
+    "name": "月城つばき",
+    "age": "23",
+    "height": "156",
+    "bust": "C",
+    "notification_date": "2025-12-26 19:00:39",
+    "collected_at": "2025-12-27T00:41:58.873Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/58034?openExternalBrowser=1",
+    "link": "https://delice.love/movie/58034?openExternalBrowser=1",
+    "name": "しずか",
+    "age": "25",
+    "height": "162",
+    "bust": "D",
+    "notification_date": "2025-12-26 17:16:39",
+    "collected_at": "2025-12-27T00:41:58.873Z",
+    "tweeted_at": null
   }
 ]
