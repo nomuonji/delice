@@ -344,7 +344,7 @@
     "bust": "B",
     "notification_date": "2026-01-04 18:02:42",
     "collected_at": "2026-01-05T00:47:46.067Z",
-    "tweeted_at": null
+    "tweeted_at": "2026-01-05T05:04:07.612Z"
   },
   {
     "id": "https://delice.love/movie/58722?openExternalBrowser=1",
@@ -355,6 +355,7 @@
     "bust": "D",
     "notification_date": "2026-01-04 18:00:34",
     "collected_at": "2026-01-05T00:47:46.068Z",
-    "tweeted_at": "2026-01-05T01:11:34.109Z"
+    "tweeted_at": "2026-01-05T01:11:34.109Z",
+    "threads_posted_at": "2026-01-05T05:04:18.533Z"
   }
 ]
