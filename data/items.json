@@ -358,5 +358,27 @@
     "collected_at": "2026-01-05T00:47:46.068Z",
     "tweeted_at": "2026-01-05T01:11:34.109Z",
     "threads_posted_at": "2026-01-05T05:04:18.533Z"
+  },
+  {
+    "id": "https://delice.love/movie/58838?openExternalBrowser=1",
+    "link": "https://delice.love/movie/58838?openExternalBrowser=1",
+    "name": "白雪くるみ",
+    "age": "21",
+    "height": "156",
+    "bust": "G",
+    "notification_date": "2026-01-05 18:45:36",
+    "collected_at": "2026-01-06T00:44:31.099Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/58812?openExternalBrowser=1",
+    "link": "https://delice.love/movie/58812?openExternalBrowser=1",
+    "name": "与田あやめ",
+    "age": "?",
+    "height": "?",
+    "bust": "?",
+    "notification_date": "2026-01-05 16:27:38",
+    "collected_at": "2026-01-06T00:44:31.099Z",
+    "tweeted_at": null
   }
 ]
