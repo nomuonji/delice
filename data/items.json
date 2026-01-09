@@ -418,5 +418,16 @@
     "collected_at": "2026-01-08T00:44:36.531Z",
     "tweeted_at": "2026-01-08T01:11:07.990Z",
     "threads_posted_at": "2026-01-08T04:55:58.067Z"
+  },
+  {
+    "id": "https://delice.love/movie/59126?openExternalBrowser=1",
+    "link": "https://delice.love/movie/59126?openExternalBrowser=1",
+    "name": "星奈",
+    "age": "26",
+    "height": "158",
+    "bust": "D",
+    "notification_date": "2026-01-08 19:40:36",
+    "collected_at": "2026-01-09T00:44:14.877Z",
+    "tweeted_at": null
   }
 ]
