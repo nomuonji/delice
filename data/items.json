@@ -529,5 +529,27 @@
     "notification_date": "2026-01-09 10:00:56",
     "collected_at": "2026-01-13T00:40:37.549Z",
     "tweeted_at": "2026-01-13T01:10:59.770Z"
+  },
+  {
+    "id": "https://delice.love/movie/59687?openExternalBrowser=1",
+    "link": "https://delice.love/movie/59687?openExternalBrowser=1",
+    "name": "白石れあ",
+    "age": "25",
+    "height": "155",
+    "bust": "D",
+    "notification_date": "2026-01-13 21:00:33",
+    "collected_at": "2026-01-14T00:45:22.116Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/59677?openExternalBrowser=1",
+    "link": "https://delice.love/movie/59677?openExternalBrowser=1",
+    "name": "七瀬ゆな",
+    "age": "21",
+    "height": "148",
+    "bust": "C",
+    "notification_date": "2026-01-13 20:00:40",
+    "collected_at": "2026-01-14T00:45:22.116Z",
+    "tweeted_at": null
   }
 ]
