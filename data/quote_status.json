@@ -1,0 +1,13 @@
+{
+  "quotedTweetIds": [
+    "123456789"
+  ],
+  "lastRun": "2026-01-06T20:09:05.857Z",
+  "lastQuotedTweet": {
+    "id": "123456789",
+    "url": "https://twitter.com/example/status/123456789",
+    "authorUsername": "example",
+    "text": "サンプルツイート内容（オプション - APIで取得可能）",
+    "quoteComment": "わかりみが深い...🙏"
+  }
+}
