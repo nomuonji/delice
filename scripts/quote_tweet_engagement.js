@@ -126,6 +126,68 @@ function getNextKeyword(status) {
     };
 }
 
+// ===== RapidAPI でトレンド取得 =====
+async function getTrends() {
+    console.log('🔍 Fetching Twitter Trends...');
+    const options = {
+        method: 'GET',
+        url: `https://${CONFIG.RAPIDAPI_HOST}/trends.php`,
+        params: { woeid: '23424856' }, // Japan
+        headers: {
+            'x-rapidapi-key': CONFIG.RAPIDAPI_KEY,
+            'x-rapidapi-host': CONFIG.RAPIDAPI_HOST,
+        },
+    };
+
+    try {
+        const response = await axios.request(options);
+        if (response.data && response.data.trends) {
+            return response.data.trends;
+        }
+        return [];
+    } catch (error) {
+        console.error('❌ Failed to fetch trends:', error.message);
+        return [];
+    }
+}
+
+// ===== Gemini AIで最適なトレンドを選定 =====
+async function selectBestTrend(trends) {
+    if (!trends || trends.length === 0) return null;
+    if (!geminiModel) return trends[0].name; // AIなしなら1位を使う
+
+    // 上位20件から選ぶ
+    const candidates = trends.slice(0, 20).map(t => t.name).join(', ');
+
+    const prompt = `
+あなたはSNSマーケティングの専門家です。以下のTwitterトレンドの中から、ターゲット層（彼女が欲しい20-40代男性）が関心を持ちやすく、かつ安全な話題を1つ選んでください。
+
+【候補】
+${candidates}
+
+【選択基準】
+- **必ず日本語のトレンドワードを選ぶこと**
+- アニメ、漫画、ゲーム、芸能、ネタ系、季節の話題など、男性が雑談で盛り上がる話題
+- 恋愛に関連付けられそうなワードは最優先
+- 野球やサッカーなどのスポーツ速報は、専門的すぎるため避ける（ただし大谷翔平レベルの国民的ニュースなら可）
+- 政治、事件、事故、訃報、災害、炎上中の話題は**絶対に除外**
+- 特定の個人への攻撃やネガティブな話題も**絶対に除外**
+
+最も適したトレンドワードを1つだけ出力してください（説明不要、ワードのみ）。適したものがない場合は "NONE" と出力してください。
+`;
+
+    try {
+        const result = await geminiModel.generateContent(prompt);
+        const selected = result.response.text().trim().replace(/^["']|["']$/g, '');
+
+        if (selected === 'NONE') return null;
+        return selected;
+    } catch (error) {
+        console.error('Trend selection failed:', error.message);
+        return trends[0].name; // エラー時は1位
+    }
+}
+
 // ===== RapidAPI でツイート検索 =====
 async function searchTweets(keyword) {
     console.log(`🔍 Searching: "${keyword}"`);
@@ -176,6 +238,7 @@ async function evaluateAndGenerateComment(tweet) {
 
 【アカウントコンセプト】
 ${CONFIG.ACCOUNT_CONCEPT}
+※ただし、時事ネタやトレンドには柔軟に反応して「普通の男性」っぽさを演出することも重要です。
 
 【評価するツイート】
 投稿者: @${tweet.authorScreenName} (フォロワー: ${tweet.followersCount.toLocaleString()})
@@ -183,17 +246,17 @@ ${CONFIG.ACCOUNT_CONCEPT}
 
 【タスク1: 適合性判断】
 以下の基準で判断:
-- ターゲット層（彼女欲しい男性）がフォローしていそうなインフルエンサーの投稿か？
-- 恋愛、モテ、マッチングアプリ、デートなどに関する有益な情報発信か？
-- 引用ツイートしても違和感がない内容か？
-- 宣伝、炎上、政治、ネガティブな内容は不適合
+- ターゲット層（男性）が関心を持ちそうな話題か？（恋愛以外のアニメ、ネタ、芸能なども可）
+- 引用ツイートして「へー」「わかる」「面白い」と言える内容か？
+- **宣伝、アフィリエイト、スパム、政治、炎上、ネガティブ、誰かの悪口は徹底的に不適合とする**
+- 野球結果の羅列などの無機質なニュースは不適合
 
 【タスク2: 引用コメント生成】
 適合する場合のみコメントを生成:
+- **重要: ツイートの内容に具体的に触れること**（「参考になる」等の定型文は禁止）
 - 20-30文字程度
-- 学びや気づきを得た感じ
+- 友達に話しかけるようなくだけた口調（タメ口でOK）
 - 絵文字1-2個
-- 自然で共感を呼ぶトーン
 
 以下のJSON形式で回答（説明無しでJSONのみ）:
 {
@@ -282,9 +345,20 @@ function basicFilter(tweets, status) {
             createdAt: tweet.created_at,
         };
     }).filter(t => {
+        // 24時間以内の投稿のみ
+        const createdAt = new Date(t.createdAt);
+        const now = new Date();
+        const diffHours = (now - createdAt) / (1000 * 60 * 60);
+        if (diffHours > 24) return false;
+
         if (t.followersCount === 0) return CONFIG.ALLOW_UNKNOWN_FOLLOWERS;
         return t.followersCount >= CONFIG.MIN_FOLLOWERS;
-    }).sort((a, b) => b.followersCount - a.followersCount);
+    }).sort((a, b) => {
+        // 日付でソート（最新順）
+        const dateA = new Date(a.createdAt);
+        const dateB = new Date(b.createdAt);
+        return dateB - dateA;
+    });
 }
 
 // ===== 最適なツイートを選択（AI判断付き） =====
@@ -394,17 +468,41 @@ async function postQuoteTweet(tweet, keywordUsed) {
 
 // ===== メイン処理 =====
 async function main() {
-    console.log('🚀 Quote Tweet Engagement (Gemini AI版)');
+    // 引数チェック
+    const USE_TREND = process.argv.includes('--trend');
+
+    console.log(`🚀 Quote Tweet Engagement (Gemini AI版) ${USE_TREND ? '[TREND MODE]' : '[NORMAL MODE]'}`);
     if (DRY_RUN) {
         console.log('⚡ [DRY RUN MODE] シミュレーション実行中（投稿しません）');
     }
     console.log('');
 
     const status = loadStatus();
+    let keyword = '';
+    let index = -1;
 
-    // 次のキーワードを取得
-    const { keyword, index } = getNextKeyword(status);
-    console.log(`Keyword rotation: [${index + 1}/${CONFIG.SEARCH_KEYWORDS.length}]`);
+    if (USE_TREND) {
+        // トレンド取得
+        const trends = await getTrends();
+        console.log(`  → Found ${trends.length} trends`);
+
+        // AI選定
+        const trendName = await selectBestTrend(trends);
+        if (trendName) {
+            keyword = trendName;
+            console.log(`✨ Selected Trend: "${keyword}"`);
+        } else {
+            console.log('⚠️ No suitable trend found or AI error. Falling back to normal keywords.');
+        }
+    }
+
+    // トレンドが取得できなかった場合、または通常モードの場合はローテーション
+    if (!keyword) {
+        const next = getNextKeyword(status);
+        keyword = next.keyword;
+        index = next.index;
+        console.log(`Keyword rotation: [${index + 1}/${CONFIG.SEARCH_KEYWORDS.length}]`);
+    }
 
     // 検索（1回のAPIコール）
     const result = await searchTweets(keyword);
@@ -427,7 +525,10 @@ async function main() {
 
     if (!bestTweet) {
         console.log('\n⚠️ No suitable tweet found');
-        status.lastKeywordIndex = index;
+        // キーワード検索だった場合のみインデックスを進める
+        if (index !== -1) {
+            status.lastKeywordIndex = index;
+        }
         status.lastRun = new Date().toISOString();
         saveStatus(status);
         return;
@@ -438,11 +539,18 @@ async function main() {
     // 引用ツイート投稿
     await postQuoteTweet(bestTweet, keyword);
 
-    // キーワードインデックスを更新
-    status.lastKeywordIndex = index;
+    // キーワードインデックスを更新（キーワード検索だった場合のみ）
+    if (index !== -1) {
+        status.lastKeywordIndex = index;
+    }
     saveStatus(status);
 
-    console.log(`\n✨ Done! Next keyword: "${CONFIG.SEARCH_KEYWORDS[(index + 1) % CONFIG.SEARCH_KEYWORDS.length]}"`);
+    // 次回のキーワード予告（キーワード検索だった場合のみ）
+    if (index !== -1) {
+        console.log(`\n✨ Done! Next keyword: "${CONFIG.SEARCH_KEYWORDS[(index + 1) % CONFIG.SEARCH_KEYWORDS.length]}"`);
+    } else {
+        console.log(`\n✨ Done!`);
+    }
 }
 
 // 実行
