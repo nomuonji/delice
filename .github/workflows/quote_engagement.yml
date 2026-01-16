@@ -1,14 +1,13 @@
-name: Tweet Queue
+name: Quote Tweet Engagement
 
 on:
   schedule:
-    # UTC 2-18/4 (JST 11:00, 15:00, 19:00, 23:00, 03:00)
-    # tweet_updates.ymlの2時間後にオフセット (既存: 0-16/4 = JST 9,13,17,21,25)
-    # - cron: '45 2-18/4 * * *'  <-- 停止中
+    # UTC 3:00 (JST 12:00), 12:00 (JST 21:00)
+    - cron: '0 3,12 * * *'
   workflow_dispatch:
 
 jobs:
-  tweet-queue:
+  engage:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -25,22 +24,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Tweet from Queue
+      - name: Run Quote Engagement
         env:
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
           TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
           TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
           TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
-        run: npm run tweet-queue
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: npm run quote-engage
 
       - name: Commit and Push Status
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add data/tweets_status.json
+          git add data/quote_engagement_status.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update tweets_status.json [skip ci]"
+            git commit -m "Update quote engagement status [skip ci]"
             git push
           fi

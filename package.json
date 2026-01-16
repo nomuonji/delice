@@ -9,9 +9,11 @@
         "tweet": "node scripts/tweet_updates.js",
         "threads": "node scripts/threads_updates.js",
         "tweet-queue": "node scripts/tweet_from_queue.js",
+        "quote-engage": "node scripts/quote_tweet_engagement.js",
         "all": "npm run collect && npm run tweet && npm run threads"
     },
     "dependencies": {
+        "@google/generative-ai": "^0.24.1",
         "axios": "^1.13.2",
         "dotenv": "^16.6.1",
         "playwright": "^1.40.0",
