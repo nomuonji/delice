@@ -1,5 +1,7 @@
 {
-  "quotedTweetIds": [],
+  "quotedTweetIds": [
+    "2012133644408938539"
+  ],
   "lastKeywordIndex": 2,
   "lastRun": null,
   "quotedTweets": []
