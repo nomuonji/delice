@@ -1,8 +1,9 @@
 /**
  * 引用ツイートエンゲージメントスクリプト（Gemini AI版）
  * 
- * 自動運用向け：1回の実行で1キーワード検索、AI判断で最適なツイートに反応
- * Gemini APIで適合性判断と引用コメント生成
+ * モード:
+ * 1. [--collect] 収集モード: キーワード検索から良質なアカウントを収集してリストに保存
+ * 2. [通常] エンゲージメントモード: 保存されたアカウントのタイムラインを見に行き、反応する
  */
 
 const { TwitterApi } = require('twitter-api-v2');
@@ -13,40 +14,27 @@ const path = require('path');
 require('dotenv').config();
 
 // ===== 設定 =====
-// コマンドライン引数で --dry-run を指定するとシミュレーションモード
 const DRY_RUN = process.argv.includes('--dry-run');
 
 const CONFIG = {
-    // RapidAPI設定
     RAPIDAPI_KEY: process.env.RAPIDAPI_KEY || '60203995famsh8e0d771fc56b027p117717jsnee56450388aa',
     RAPIDAPI_HOST: process.env.RAPIDAPI_HOST || 'twitter-api45.p.rapidapi.com',
 
-    // Gemini API設定
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    GEMINI_MODEL: 'gemini-2.0-flash',
+    GEMINI_MODEL: 'gemini-2.5-flash',
 
-    // 検索キーワード（ターゲット層がフォローしているインフルエンサー/競合のコンテンツ）
+    // アカウント収集用キーワード
     SEARCH_KEYWORDS: [
-        'モテない男 共通点',
-        'マッチングアプリ プロフィール',
-        'モテる男 マインド',
-        '女性心理 恋愛',
-        'マッチングアプリ メッセージ',
-        'モテテク',
-        'デート 誘い方',
-        '恋愛 初心者',
+        'モテない男 共通点', 'マッチングアプリ プロフィール', 'モテる男 マインド',
+        '女性心理 恋愛', 'マッチングアプリ メッセージ', 'モテテク', 'デート 誘い方', '恋愛 初心者'
     ],
 
-    // フォロワー最小数（インフルエンサーをターゲットにするため高めに）
     MIN_FOLLOWERS: 1000,
 
-    // フォロワー数が取得できない場合でも反応するか
-    ALLOW_UNKNOWN_FOLLOWERS: false,
-
-    // ステータスファイル
+    // データファイル
     STATUS_FILE: path.join(__dirname, '../data/quote_engagement_status.json'),
+    ACCOUNTS_FILE: path.join(__dirname, '../data/target_accounts.json'),
 
-    // アカウントコンセプト（AI判断用）
     ACCOUNT_CONCEPT: `
 このアカウントは「delice.love」という高級デリヘルサービスのアフィリエイトアカウントです。
 ターゲット層は「彼女が欲しい」「女性との出会いがない」「寂しい」と感じている20-40代の男性です。
@@ -54,504 +42,243 @@ const CONFIG = {
     `,
 
     // 除外ワード
-    EXCLUDE_WORDS: [
-        '彼氏', '推し', 'イケメン', '旦那', '夫', 'ママ',
-        'ゲイ', 'BL', '腐女子', 'わたし', '私の', '嫁', '妻',
-        '開業', '宣伝', 'PR', 'ご来店', '予約', '営業中',
-        '#ad', '応募', 'キャンペーン', 'フォロー&RT',
-        'grok', 'ChatGPT', '展覧会', '美術館', 'MUSEUM',
-    ],
+    EXCLUDE_WORDS: ['彼氏', '推し', 'イケメン', '旦那', '夫', 'ママ', 'ゲイ', 'BL', '腐女子', '宣伝', 'PR', 'ご来店', '予約', '営業中', '#ad', 'grok', 'ChatGPT'],
+    EXCLUDE_ACCOUNTS: ['grok', 'chatgpt', 'openai', 'claude', 'gemini'],
 };
 
-// ===== Gemini AI Client =====
-let genAI = null;
-let geminiModel = null;
+// ===== 初期化 =====
+let genAI, geminiModel, twitterClient;
 
-if (CONFIG.GEMINI_API_KEY && CONFIG.GEMINI_API_KEY !== 'your_gemini_api_key_here') {
-    try {
-        genAI = new GoogleGenerativeAI(CONFIG.GEMINI_API_KEY);
-        geminiModel = genAI.getGenerativeModel({ model: CONFIG.GEMINI_MODEL });
-        console.log('✅ Gemini AI initialized');
-    } catch (e) {
-        console.warn('⚠️ Failed to initialize Gemini AI:', e.message);
-    }
-} else {
-    console.warn('⚠️ Gemini API key not found. AI features disabled.');
+if (CONFIG.GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(CONFIG.GEMINI_API_KEY);
+    geminiModel = genAI.getGenerativeModel({ model: CONFIG.GEMINI_MODEL });
 }
 
-// ===== Twitter API Client =====
-let twitterClient = null;
-if (process.env.TWITTER_API_KEY && process.env.TWITTER_API_KEY !== 'your_api_key') {
-    try {
-        twitterClient = new TwitterApi({
-            appKey: process.env.TWITTER_API_KEY,
-            appSecret: process.env.TWITTER_API_SECRET,
-            accessToken: process.env.TWITTER_ACCESS_TOKEN,
-            accessSecret: process.env.TWITTER_ACCESS_SECRET,
-        });
-    } catch (e) {
-        console.warn('Failed to initialize Twitter client. Running in DRY RUN mode.');
-    }
-} else {
-    console.log('Twitter credentials not found. Running in DRY RUN mode.');
+if (process.env.TWITTER_API_KEY) {
+    twitterClient = new TwitterApi({
+        appKey: process.env.TWITTER_API_KEY,
+        appSecret: process.env.TWITTER_API_SECRET,
+        accessToken: process.env.TWITTER_ACCESS_TOKEN,
+        accessSecret: process.env.TWITTER_ACCESS_SECRET,
+    });
 }
 
-// ===== ステータス管理 =====
-function loadStatus() {
-    if (fs.existsSync(CONFIG.STATUS_FILE)) {
+// ===== データ管理 =====
+function loadData(filePath, defaultData) {
+    if (fs.existsSync(filePath)) {
         try {
-            return JSON.parse(fs.readFileSync(CONFIG.STATUS_FILE, 'utf8'));
+            return JSON.parse(fs.readFileSync(filePath, 'utf8'));
         } catch (e) {
-            console.warn('Failed to parse status file, starting fresh.');
+            console.warn(`Failed to parse ${filePath}, using default.`);
         }
     }
-    return {
-        quotedTweetIds: [],
-        lastKeywordIndex: -1,
-        lastRun: null,
-        quotedTweets: [],
-    };
+    return defaultData;
 }
 
-function saveStatus(status) {
-    fs.writeFileSync(CONFIG.STATUS_FILE, JSON.stringify(status, null, 2), 'utf8');
+function saveData(filePath, data) {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
-// ===== 次のキーワードを取得（ローテーション） =====
-function getNextKeyword(status) {
-    const nextIndex = (status.lastKeywordIndex + 1) % CONFIG.SEARCH_KEYWORDS.length;
-    return {
-        keyword: CONFIG.SEARCH_KEYWORDS[nextIndex],
-        index: nextIndex,
-    };
-}
-
-// ===== RapidAPI でトレンド取得 =====
-async function getTrends() {
-    console.log('🔍 Fetching Twitter Trends...');
+// ===== RapidAPI ラッパー =====
+async function callRapidAPI(endpoint, params) {
     const options = {
         method: 'GET',
-        url: `https://${CONFIG.RAPIDAPI_HOST}/trends.php`,
-        params: { woeid: '23424856' }, // Japan
+        url: `https://${CONFIG.RAPIDAPI_HOST}/${endpoint}`,
+        params: params,
         headers: {
             'x-rapidapi-key': CONFIG.RAPIDAPI_KEY,
             'x-rapidapi-host': CONFIG.RAPIDAPI_HOST,
         },
     };
-
-    try {
-        const response = await axios.request(options);
-        if (response.data && response.data.trends) {
-            return response.data.trends;
-        }
-        return [];
-    } catch (error) {
-        console.error('❌ Failed to fetch trends:', error.message);
-        return [];
-    }
-}
-
-// ===== Gemini AIで最適なトレンドを選定 =====
-async function selectBestTrend(trends) {
-    if (!trends || trends.length === 0) return null;
-    if (!geminiModel) return trends[0].name; // AIなしなら1位を使う
-
-    // 上位20件から選ぶ
-    const candidates = trends.slice(0, 20).map(t => t.name).join(', ');
-
-    const prompt = `
-あなたはSNSマーケティングの専門家です。以下のTwitterトレンドの中から、ターゲット層（彼女が欲しい20-40代男性）が関心を持ちやすく、かつ安全な話題を1つ選んでください。
-
-【候補】
-${candidates}
-
-【選択基準】
-- **必ず日本語のトレンドワードを選ぶこと**
-- アニメ、漫画、ゲーム、芸能、ネタ系、季節の話題など、男性が雑談で盛り上がる話題
-- 恋愛に関連付けられそうなワードは最優先
-- 野球やサッカーなどのスポーツ速報は、専門的すぎるため避ける（ただし大谷翔平レベルの国民的ニュースなら可）
-- 政治、事件、事故、訃報、災害、炎上中の話題は**絶対に除外**
-- 特定の個人への攻撃やネガティブな話題も**絶対に除外**
-
-最も適したトレンドワードを1つだけ出力してください（説明不要、ワードのみ）。適したものがない場合は "NONE" と出力してください。
-`;
-
-    try {
-        const result = await geminiModel.generateContent(prompt);
-        const selected = result.response.text().trim().replace(/^["']|["']$/g, '');
-
-        if (selected === 'NONE') return null;
-        return selected;
-    } catch (error) {
-        console.error('Trend selection failed:', error.message);
-        return trends[0].name; // エラー時は1位
-    }
-}
-
-// ===== RapidAPI でツイート検索 =====
-async function searchTweets(keyword) {
-    console.log(`🔍 Searching: "${keyword}"`);
-
-    const options = {
-        method: 'GET',
-        url: 'https://twitter-api45.p.rapidapi.com/search.php',
-        params: {
-            query: keyword,
-            search_type: 'Latest',
-        },
-        headers: {
-            'x-rapidapi-key': CONFIG.RAPIDAPI_KEY,
-            'x-rapidapi-host': CONFIG.RAPIDAPI_HOST,
-        },
-    };
-
     try {
         const response = await axios.request(options);
         return response.data;
     } catch (error) {
-        console.error(`❌ Search failed:`, error.message);
+        console.error(`API Error (${endpoint}):`, error.message);
         return null;
     }
 }
 
-// ===== Gemini AIで適合性判断 + コメント生成（1回のAPIコール） =====
-async function evaluateAndGenerateComment(tweet) {
-    const fallbackComments = [
-        'これは刺さる...メモした📝',
-        'マジで参考になる🔥',
-        'めっちゃ為になる🙏',
-        'ほんとこれ大事だよな...✨',
-    ];
+// ===== アカウント収集モード =====
+async function runCollectionMode() {
+    console.log('🕵️ Collection Mode: Searching for target accounts...');
 
-    if (!geminiModel) {
-        // Gemini使用不可の場合はフォールバック
-        return {
-            isRelevant: true,
-            score: 50,
-            reason: 'AI unavailable',
-            comment: fallbackComments[Math.floor(Math.random() * fallbackComments.length)],
-        };
+    // アカウントリスト読み込み
+    let accounts = loadData(CONFIG.ACCOUNTS_FILE, []);
+    const existingIds = new Set(accounts.map(a => a.id));
+
+    // ステータス（キーワードローテーション用）読み込み
+    const status = loadData(CONFIG.STATUS_FILE, { lastKeywordIndex: -1, quotedTweetIds: [] });
+
+    // キーワード選択
+    const nextIndex = (status.lastKeywordIndex + 1) % CONFIG.SEARCH_KEYWORDS.length;
+    const keyword = CONFIG.SEARCH_KEYWORDS[nextIndex];
+    console.log(`🔍 Keyword: "${keyword}"`);
+
+    // 検索実行
+    const data = await callRapidAPI('search.php', { query: keyword, search_type: 'Top' }); // Top検索で良質なアカウントを探す
+
+    let tweets = [];
+    if (data && (data.timeline || data.tweets)) tweets = data.timeline || data.tweets;
+
+    let addedCount = 0;
+    for (const tweet of tweets) {
+        // ユーザー情報抽出
+        const user = tweet.user || tweet.user_info || {};
+        const screenName = tweet.screen_name || user.screen_name;
+        const followers = user.followers_count || tweet.followers_count || 0;
+        const userId = user.id_str || tweet.user_id_str || screenName; // IDが無ければscreenNameをID代わりに
+
+        if (!screenName || followers < CONFIG.MIN_FOLLOWERS) continue;
+
+        // 除外アカウントチェック
+        if (CONFIG.EXCLUDE_ACCOUNTS.some(exc => screenName.toLowerCase().includes(exc))) continue;
+        if (existingIds.has(userId)) continue;
+
+        // リストに追加
+        accounts.push({
+            id: userId,
+            screenName: screenName,
+            name: user.name || tweet.name,
+            followers: followers,
+            addedAt: new Date().toISOString(),
+            lastCheck: null
+        });
+        existingIds.add(userId);
+        addedCount++;
+        console.log(`  + Added: @${screenName} (${followers} followers)`);
     }
+
+    console.log(`✅ Collection complete. Added ${addedCount} accounts. Total: ${accounts.length}`);
+
+    // 保存
+    saveData(CONFIG.ACCOUNTS_FILE, accounts);
+
+    // ステータス更新
+    status.lastKeywordIndex = nextIndex;
+    saveData(CONFIG.STATUS_FILE, status);
+}
+
+// ===== エンゲージメントモード =====
+async function runEngagementMode() {
+    console.log('🚀 Engagement Mode: Checking target accounts...');
+
+    let accounts = loadData(CONFIG.ACCOUNTS_FILE, []);
+    if (accounts.length === 0) {
+        console.warn('⚠️ No target accounts found. Please run with --collect first.');
+        return;
+    }
+
+    // ランダムに3アカウント選出（API制限考慮）
+    // NOTE: lastCheckが古い順にするなどのロジックもアリだが、今回はランダム
+    const targets = accounts.sort(() => 0.5 - Math.random()).slice(0, 3);
+
+    const status = loadData(CONFIG.STATUS_FILE, { quotedTweetIds: [] });
+
+    for (const target of targets) {
+        console.log(`\n👀 Checking timeline: @${target.screenName}`);
+
+        // タイムライン取得
+        const data = await callRapidAPI('timeline.php', { screenname: target.screenName });
+        let tweets = data ? (data.timeline || data.tweets || []) : [];
+
+        // フィルタリング（24時間以内 & 引用済み除外）
+        const candidates = tweets.filter(t => {
+            const tweetId = t.tweet_id || t.id_str;
+            if (status.quotedTweetIds.includes(tweetId)) return false;
+
+            // 24時間以内
+            const createdAt = new Date(t.created_at);
+            const diffHours = (new Date() - createdAt) / (1000 * 60 * 60);
+            return diffHours <= 24;
+        }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // 最新順
+
+        if (candidates.length === 0) {
+            console.log('  → No recent tweets found.');
+            continue;
+        }
+
+        console.log(`  → Found ${candidates.length} recent tweets. Analyzing top candidate with AI...`);
+
+        // 最新1件だけAI評価（API節約）
+        const bestTweet = candidates[0];
+        const formattedTweet = {
+            authorScreenName: target.screenName,
+            followersCount: target.followers, // 最新データではないが保存データを使用
+            text: bestTweet.text || bestTweet.full_text,
+            tweetId: bestTweet.tweet_id || bestTweet.id_str
+        };
+
+        const aiResult = await evaluateAndGenerateComment(formattedTweet);
+        console.log(`  AI Score: ${aiResult.score}, Relevant: ${aiResult.isRelevant}`);
+
+        if (aiResult.isRelevant && aiResult.score >= 60) {
+            console.log(`  🎯 Target locked! Comment: ${aiResult.comment}`);
+            await postQuoteTweet(formattedTweet, aiResult.comment, status);
+            return; // 1回につき1ツイートしたら終了（スパム防止）
+        }
+    }
+
+    console.log('\n⚠️ No suitable tweets found in this run.');
+}
+
+// ===== AI評価 & コメント生成 =====
+async function evaluateAndGenerateComment(tweet) {
+    if (!geminiModel) return { isRelevant: true, score: 50, comment: 'これは刺さる...メモした📝' };
 
     const prompt = `
 あなたはSNSマーケティングの専門家です。以下のツイートを評価し、引用コメントを生成してください。
 
 【アカウントコンセプト】
 ${CONFIG.ACCOUNT_CONCEPT}
-※ただし、時事ネタやトレンドには柔軟に反応して「普通の男性」っぽさを演出することも重要です。
 
-【評価するツイート】
-投稿者: @${tweet.authorScreenName} (フォロワー: ${tweet.followersCount.toLocaleString()})
-内容: ${tweet.text}
+【評価ツイート】
+@${tweet.authorScreenName}: ${tweet.text}
 
-【タスク1: 適合性判断】
-以下の基準で判断:
-- ターゲット層（男性）が関心を持ちそうな話題か？（恋愛以外のアニメ、ネタ、芸能なども可）
-- 引用ツイートして「へー」「わかる」「面白い」と言える内容か？
-- **宣伝、アフィリエイト、スパム、政治、炎上、ネガティブ、誰かの悪口は徹底的に不適合とする**
-- 野球結果の羅列などの無機質なニュースは不適合
+【タスク】
+1. 適合性判断: ターゲット層（男性）にとって興味深く、引用して違和感がないか？（宣伝・スパム・ネガティブは不可）
+2. コメント生成: 適合する場合、20-30文字で共感や学びを示す、友達に話すような口調のコメント。
 
-【タスク2: 引用コメント生成】
-適合する場合のみコメントを生成:
-- **重要: ツイートの内容に具体的に触れること**（「参考になる」等の定型文は禁止）
-- 20-30文字程度
-- 友達に話しかけるようなくだけた口調（タメ口でOK）
-- 絵文字1-2個
-
-以下のJSON形式で回答（説明無しでJSONのみ）:
-{
-  "isRelevant": true/false,
-  "score": 0-100,
-  "reason": "判断理由",
-  "comment": "引用コメント（不適合なら空文字）"
-}
+出力JSON: { "isRelevant": bool, "score": 0-100, "reason": "...", "comment": "..." }
 `;
 
     try {
         const result = await geminiModel.generateContent(prompt);
-        const responseText = result.response.text();
-
-        // JSONを抽出
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            // コメントが空か短すぎる場合はフォールバック
-            if (!parsed.comment || parsed.comment.length < 5) {
-                parsed.comment = fallbackComments[Math.floor(Math.random() * fallbackComments.length)];
-            }
-            // 長すぎる場合は切り詰め
-            if (parsed.comment.length > 50) {
-                parsed.comment = parsed.comment.substring(0, 47) + '...';
-            }
-            return parsed;
-        }
-        return {
-            isRelevant: false,
-            score: 0,
-            reason: 'Failed to parse AI response',
-            comment: '',
-        };
-    } catch (error) {
-        console.error('AI evaluation failed:', error.message);
-        return {
-            isRelevant: true,
-            score: 50,
-            reason: 'AI error, defaulting to true',
-            comment: fallbackComments[Math.floor(Math.random() * fallbackComments.length)],
-        };
+        const jsonMatch = result.response.text().match(/\{[\s\S]*\}/);
+        return jsonMatch ? JSON.parse(jsonMatch[0]) : { isRelevant: false, score: 0 };
+    } catch (e) {
+        console.error('AI Error:', e.message);
+        return { isRelevant: false, score: 0 };
     }
 }
 
-// ===== 基本フィルター =====
-function basicFilter(tweets, status) {
-    if (!tweets || !Array.isArray(tweets)) return [];
+// ===== 投稿実行 =====
+async function postQuoteTweet(tweet, comment, status) {
+    const content = `${comment}\n\nhttps://twitter.com/${tweet.authorScreenName}/status/${tweet.tweetId}`;
 
-    // 除外するアカウント名
-    const EXCLUDE_ACCOUNTS = ['grok', 'chatgpt', 'openai', 'claude', 'gemini'];
-
-    return tweets.filter(tweet => {
-        const tweetId = tweet.tweet_id || tweet.id || tweet.id_str;
-        const text = tweet.text || tweet.full_text || '';
-        const userInfo = tweet.user_info || tweet.user || tweet.author || {};
-        const screenName = (tweet.screen_name || userInfo.screen_name || '').toLowerCase();
-
-        // 既に引用済みは除外
-        if (status.quotedTweetIds.includes(tweetId)) return false;
-
-        // リツイートは除外
-        if (text.startsWith('RT @')) return false;
-
-        // 返信は除外（@で始まる）
-        if (text.startsWith('@')) return false;
-
-        // 除外アカウントは除外
-        if (EXCLUDE_ACCOUNTS.some(name => screenName.includes(name))) return false;
-
-        // 除外ワードを含む投稿は除外
-        const hasExcludeWord = CONFIG.EXCLUDE_WORDS.some(word =>
-            text.toLowerCase().includes(word.toLowerCase())
-        );
-        if (hasExcludeWord) return false;
-
-        return true;
-    }).map(tweet => {
-        const userInfo = tweet.user_info || tweet.user || tweet.author || {};
-        return {
-            tweetId: tweet.tweet_id || tweet.id || tweet.id_str,
-            text: tweet.text || tweet.full_text,
-            authorScreenName: tweet.screen_name || userInfo.screen_name,
-            authorName: userInfo.name || tweet.name,
-            followersCount: userInfo.followers_count || tweet.followers_count || 0,
-            createdAt: tweet.created_at,
-        };
-    }).filter(t => {
-        // 24時間以内の投稿のみ
-        const createdAt = new Date(t.createdAt);
-        const now = new Date();
-        const diffHours = (now - createdAt) / (1000 * 60 * 60);
-        if (diffHours > 24) return false;
-
-        if (t.followersCount === 0) return CONFIG.ALLOW_UNKNOWN_FOLLOWERS;
-        return t.followersCount >= CONFIG.MIN_FOLLOWERS;
-    }).sort((a, b) => {
-        // 日付でソート（最新順）
-        const dateA = new Date(a.createdAt);
-        const dateB = new Date(b.createdAt);
-        return dateB - dateA;
-    });
-}
-
-// ===== 最適なツイートを選択（AI判断付き） =====
-async function selectBestTweetWithAI(tweets, status) {
-    const filtered = basicFilter(tweets, status);
-
-    if (filtered.length === 0) return null;
-
-    console.log(`  → ${filtered.length} tweets passed basic filter`);
-
-    // 上位3件をAI判断（API節約のため3件に制限）
-    const candidates = filtered.slice(0, 3);
-
-    for (const tweet of candidates) {
-        console.log(`\n🤖 AI evaluating: @${tweet.authorScreenName}`);
-        console.log(`   "${tweet.text.substring(0, 60)}..."`);
-
-        // 1回のAPIコールで適合性判断 + コメント生成
-        const result = await evaluateAndGenerateComment(tweet);
-        console.log(`   → Score: ${result.score}, Relevant: ${result.isRelevant}`);
-        console.log(`   → Reason: ${result.reason}`);
-        if (result.comment) {
-            console.log(`   → Comment: "${result.comment}"`);
-        }
-
-        if (result.isRelevant && result.score >= 60) {
-            tweet.aiScore = result.score;
-            tweet.aiReason = result.reason;
-            tweet.aiComment = result.comment;
-            return tweet;
-        }
-    }
-
-    // AIで適合するものがなければ、フォロワー最多でフォールバック
-    console.log('⚠️ No AI-approved tweet, using top follower count with fallback comment');
-    const fallback = filtered[0];
-    if (fallback) {
-        fallback.aiComment = 'これは刺さる...メモした📝';
-    }
-    return fallback;
-}
-
-// ===== 引用ツイートを投稿 =====
-async function postQuoteTweet(tweet, keywordUsed) {
-    const status = loadStatus();
-
-    // 既にAIで生成されたコメントを使用
-    const comment = tweet.aiComment || 'これは刺さる...メモした📝';
-
-    // 引用ツイートのURL
-    const quotedUrl = `https://twitter.com/${tweet.authorScreenName}/status/${tweet.tweetId}`;
-
-    // 引用ツイート内容
-    const tweetContent = `${comment}\n\n${quotedUrl}`;
-
-    console.log('\n📝 Quote Tweet:');
-    console.log('----------------------------------------');
-    console.log(`Target: @${tweet.authorScreenName} (${tweet.followersCount.toLocaleString()} followers)`);
-    console.log(`AI Score: ${tweet.aiScore || 'N/A'}`);
-    console.log(`Comment: ${comment}`);
-    console.log('----------------------------------------');
-
-    try {
-        if (DRY_RUN) {
-            console.log('[DRY RUN] シミュレーションモード - 実際には投稿しません');
-            console.log('[DRY RUN] 投稿内容:\n' + tweetContent);
-            return true;
-        }
-
-        if (twitterClient) {
-            const result = await twitterClient.v2.tweet(tweetContent);
-            console.log('✅ Posted successfully!');
-
-            // ステータス更新
-            status.quotedTweetIds.push(tweet.tweetId);
-            status.lastRun = new Date().toISOString();
-            status.quotedTweets.push({
-                quotedTweetId: tweet.tweetId,
-                authorScreenName: tweet.authorScreenName,
-                followersCount: tweet.followersCount,
-                comment: comment,
-                keyword: keywordUsed,
-                aiScore: tweet.aiScore,
-                postedAt: new Date().toISOString(),
-                ourTweetId: result.data.id,
-            });
-
-            // 最新10件だけ保持
-            if (status.quotedTweets.length > 10) {
-                status.quotedTweets = status.quotedTweets.slice(-10);
-            }
-            if (status.quotedTweetIds.length > 100) {
-                status.quotedTweetIds = status.quotedTweetIds.slice(-100);
-            }
-
-            saveStatus(status);
-            return true;
-        } else {
-            console.log('[DRY RUN] Would post:', tweetContent);
-            return true;
-        }
-    } catch (error) {
-        console.error('❌ Failed to post:', error.message);
-        return false;
-    }
-}
-
-// ===== メイン処理 =====
-async function main() {
-    // 引数チェック
-    const USE_TREND = process.argv.includes('--trend');
-
-    console.log(`🚀 Quote Tweet Engagement (Gemini AI版) ${USE_TREND ? '[TREND MODE]' : '[NORMAL MODE]'}`);
     if (DRY_RUN) {
-        console.log('⚡ [DRY RUN MODE] シミュレーション実行中（投稿しません）');
-    }
-    console.log('');
-
-    const status = loadStatus();
-    let keyword = '';
-    let index = -1;
-
-    if (USE_TREND) {
-        // トレンド取得
-        const trends = await getTrends();
-        console.log(`  → Found ${trends.length} trends`);
-
-        // AI選定
-        const trendName = await selectBestTrend(trends);
-        if (trendName) {
-            keyword = trendName;
-            console.log(`✨ Selected Trend: "${keyword}"`);
-        } else {
-            console.log('⚠️ No suitable trend found or AI error. Falling back to normal keywords.');
+        console.log(`\n[DRY RUN] Would post:\n${content}`);
+    } else if (twitterClient) {
+        try {
+            const result = await twitterClient.v2.tweet(content);
+            console.log('✅ Posted successfully!');
+            // 履歴更新
+            status.quotedTweetIds.push(tweet.tweetId);
+            if (status.quotedTweetIds.length > 100) status.quotedTweetIds.shift();
+            saveData(CONFIG.STATUS_FILE, status);
+        } catch (e) {
+            console.error('❌ Post failed:', e.message);
         }
-    }
-
-    // トレンドが取得できなかった場合、または通常モードの場合はローテーション
-    if (!keyword) {
-        const next = getNextKeyword(status);
-        keyword = next.keyword;
-        index = next.index;
-        console.log(`Keyword rotation: [${index + 1}/${CONFIG.SEARCH_KEYWORDS.length}]`);
-    }
-
-    // 検索（1回のAPIコール）
-    const result = await searchTweets(keyword);
-
-    if (!result) {
-        console.log('No results. Exiting.');
-        return;
-    }
-
-    // ツイート取得
-    let tweets = result.timeline || result.tweets || result.results || [];
-    if (!Array.isArray(tweets) && result.data) {
-        tweets = result.data;
-    }
-
-    console.log(`  → Found ${tweets.length} tweets`);
-
-    // AI判断付きで最適な1件を選択
-    const bestTweet = await selectBestTweetWithAI(tweets, status);
-
-    if (!bestTweet) {
-        console.log('\n⚠️ No suitable tweet found');
-        // キーワード検索だった場合のみインデックスを進める
-        if (index !== -1) {
-            status.lastKeywordIndex = index;
-        }
-        status.lastRun = new Date().toISOString();
-        saveStatus(status);
-        return;
-    }
-
-    console.log(`\n🎯 Selected: @${bestTweet.authorScreenName} (${bestTweet.followersCount.toLocaleString()} followers)`);
-
-    // 引用ツイート投稿
-    await postQuoteTweet(bestTweet, keyword);
-
-    // キーワードインデックスを更新（キーワード検索だった場合のみ）
-    if (index !== -1) {
-        status.lastKeywordIndex = index;
-    }
-    saveStatus(status);
-
-    // 次回のキーワード予告（キーワード検索だった場合のみ）
-    if (index !== -1) {
-        console.log(`\n✨ Done! Next keyword: "${CONFIG.SEARCH_KEYWORDS[(index + 1) % CONFIG.SEARCH_KEYWORDS.length]}"`);
-    } else {
-        console.log(`\n✨ Done!`);
     }
 }
 
-// 実行
+// ===== メイン =====
+async function main() {
+    if (process.argv.includes('--collect')) {
+        await runCollectionMode();
+    } else {
+        await runEngagementMode();
+    }
+}
+
 main().catch(console.error);
