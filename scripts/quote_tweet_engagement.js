@@ -38,7 +38,7 @@ const CONFIG = {
     ],
 
     // フォロワー最小数（インフルエンサーをターゲットにするため高めに）
-    MIN_FOLLOWERS: 3000,
+    MIN_FOLLOWERS: 1000,
 
     // フォロワー数が取得できない場合でも反応するか
     ALLOW_UNKNOWN_FOLLOWERS: false,
