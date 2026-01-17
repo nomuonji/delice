@@ -602,5 +602,27 @@
     "collected_at": "2026-01-16T00:45:19.369Z",
     "tweeted_at": "2026-01-16T01:11:05.879Z",
     "threads_posted_at": "2026-01-16T01:11:18.797Z"
+  },
+  {
+    "id": "https://delice.love/movie/60014?openExternalBrowser=1",
+    "link": "https://delice.love/movie/60014?openExternalBrowser=1",
+    "name": "佐藤もも",
+    "age": "25",
+    "height": "152",
+    "bust": "C",
+    "notification_date": "2026-01-16 20:30:36",
+    "collected_at": "2026-01-17T00:42:35.190Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/59976?openExternalBrowser=1",
+    "link": "https://delice.love/movie/59976?openExternalBrowser=1",
+    "name": "月野りり",
+    "age": "?",
+    "height": "?",
+    "bust": "?",
+    "notification_date": "2026-01-16 17:00:45",
+    "collected_at": "2026-01-17T00:42:35.190Z",
+    "tweeted_at": null
   }
 ]
