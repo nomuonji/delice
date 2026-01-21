@@ -702,7 +702,7 @@
     "bust": "C",
     "notification_date": "2026-01-20 20:00:34",
     "collected_at": "2026-01-21T00:45:23.962Z",
-    "tweeted_at": null
+    "tweeted_at": "2026-01-21T08:55:30.426Z"
   },
   {
     "id": "https://delice.love/movie/60407?openExternalBrowser=1",
@@ -713,7 +713,8 @@
     "bust": "C",
     "notification_date": "2026-01-20 17:35:37",
     "collected_at": "2026-01-21T00:45:23.963Z",
-    "tweeted_at": "2026-01-21T04:58:43.814Z"
+    "tweeted_at": "2026-01-21T04:58:43.814Z",
+    "threads_posted_at": "2026-01-21T08:55:49.834Z"
   },
   {
     "id": "https://delice.love/movie/60373?openExternalBrowser=1",
