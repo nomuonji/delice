@@ -728,5 +728,27 @@
     "collected_at": "2026-01-21T00:45:23.963Z",
     "tweeted_at": "2026-01-21T01:11:14.850Z",
     "threads_posted_at": "2026-01-21T01:11:30.405Z"
+  },
+  {
+    "id": "https://delice.love/movie/60506?openExternalBrowser=1",
+    "link": "https://delice.love/movie/60506?openExternalBrowser=1",
+    "name": "高嶺かこ",
+    "age": "23",
+    "height": "160",
+    "bust": "D",
+    "notification_date": "2026-01-21 21:30:40",
+    "collected_at": "2026-01-22T00:44:49.743Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/60498?openExternalBrowser=1",
+    "link": "https://delice.love/movie/60498?openExternalBrowser=1",
+    "name": "宮越れんか",
+    "age": "26",
+    "height": "145",
+    "bust": "D",
+    "notification_date": "2026-01-21 19:25:39",
+    "collected_at": "2026-01-22T00:44:49.743Z",
+    "tweeted_at": null
   }
 ]
