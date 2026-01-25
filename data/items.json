@@ -754,5 +754,49 @@
     "collected_at": "2026-01-22T00:44:49.743Z",
     "tweeted_at": "2026-01-22T01:11:12.995Z",
     "threads_posted_at": "2026-01-22T01:11:27.936Z"
+  },
+  {
+    "id": "https://delice.love/movie/60747?openExternalBrowser=1",
+    "link": "https://delice.love/movie/60747?openExternalBrowser=1",
+    "name": "山田まひろ",
+    "age": "30",
+    "height": "155",
+    "bust": "C",
+    "notification_date": "2026-01-24 17:00:40",
+    "collected_at": "2026-01-25T00:49:17.698Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/60672?openExternalBrowser=1",
+    "link": "https://delice.love/movie/60672?openExternalBrowser=1",
+    "name": "ナタリー",
+    "age": "27",
+    "height": "160",
+    "bust": "D",
+    "notification_date": "2026-01-23 18:02:41",
+    "collected_at": "2026-01-25T00:49:17.699Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/60670?openExternalBrowser=1",
+    "link": "https://delice.love/movie/60670?openExternalBrowser=1",
+    "name": "市原あゆ",
+    "age": "27",
+    "height": "153",
+    "bust": "D",
+    "notification_date": "2026-01-23 17:53:38",
+    "collected_at": "2026-01-25T00:49:17.699Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/60666?openExternalBrowser=1",
+    "link": "https://delice.love/movie/60666?openExternalBrowser=1",
+    "name": "天真ありす",
+    "age": "23",
+    "height": "150",
+    "bust": "E",
+    "notification_date": "2026-01-23 17:30:41",
+    "collected_at": "2026-01-25T00:49:17.699Z",
+    "tweeted_at": null
   }
 ]
