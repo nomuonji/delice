@@ -824,7 +824,7 @@
     "bust": "E",
     "notification_date": "2026-01-27 19:30:37",
     "collected_at": "2026-01-28T00:44:32.804Z",
-    "tweeted_at": null
+    "tweeted_at": "2026-01-28T17:00:04.701Z"
   },
   {
     "id": "https://delice.love/movie/61033?openExternalBrowser=1",
@@ -846,7 +846,8 @@
     "bust": "E",
     "notification_date": "2026-01-27 16:08:39",
     "collected_at": "2026-01-28T00:44:32.805Z",
-    "tweeted_at": "2026-01-28T08:56:17.100Z"
+    "tweeted_at": "2026-01-28T08:56:17.100Z",
+    "threads_posted_at": "2026-01-28T17:00:16.525Z"
   },
   {
     "id": "https://delice.love/movie/60983?openExternalBrowser=1",
