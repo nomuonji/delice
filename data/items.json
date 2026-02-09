@@ -1245,5 +1245,27 @@
     "notification_date": "2026-02-07 16:15:45",
     "collected_at": "2026-02-08T01:05:43.219Z",
     "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62081?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62081?openExternalBrowser=1",
+    "name": "可愛あんな",
+    "age": "27",
+    "height": "155",
+    "bust": "F",
+    "notification_date": "2026-02-08 20:00:42",
+    "collected_at": "2026-02-09T00:55:19.679Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62065?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62065?openExternalBrowser=1",
+    "name": "山本なぎさ",
+    "age": "28",
+    "height": "158",
+    "bust": "D",
+    "notification_date": "2026-02-08 18:10:38",
+    "collected_at": "2026-02-09T00:55:19.679Z",
+    "tweeted_at": null
   }
 ]
