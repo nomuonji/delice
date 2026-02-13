@@ -1377,5 +1377,104 @@
     "notification_date": "2026-02-10 15:00:43",
     "collected_at": "2026-02-11T00:58:48.089Z",
     "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62400?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62400?openExternalBrowser=1",
+    "name": "愛沢りんか",
+    "age": "23",
+    "height": "166",
+    "bust": "F",
+    "notification_date": "2026-02-12 21:00:38",
+    "collected_at": "2026-02-13T00:56:28.671Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62378?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62378?openExternalBrowser=1",
+    "name": "立花ゆい",
+    "age": "22",
+    "height": "168",
+    "bust": "E",
+    "notification_date": "2026-02-12 18:05:37",
+    "collected_at": "2026-02-13T00:56:28.671Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62372?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62372?openExternalBrowser=1",
+    "name": "音嶋みな",
+    "age": "27",
+    "height": "158",
+    "bust": "C",
+    "notification_date": "2026-02-12 17:02:46",
+    "collected_at": "2026-02-13T00:56:28.671Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62366?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62366?openExternalBrowser=1",
+    "name": "星野みゆう",
+    "age": "21",
+    "height": "155",
+    "bust": "F",
+    "notification_date": "2026-02-12 16:00:45",
+    "collected_at": "2026-02-13T00:56:28.672Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62353?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62353?openExternalBrowser=1",
+    "name": "弥りさ",
+    "age": "24",
+    "height": "158",
+    "bust": "E",
+    "notification_date": "2026-02-12 12:27:32",
+    "collected_at": "2026-02-13T00:56:28.672Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62327?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62327?openExternalBrowser=1",
+    "name": "竹取かぐや",
+    "age": "20",
+    "height": "160",
+    "bust": "C",
+    "notification_date": "2026-02-11 21:53:43",
+    "collected_at": "2026-02-13T00:56:28.672Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62287?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62287?openExternalBrowser=1",
+    "name": "五十嵐るか",
+    "age": "22",
+    "height": "161",
+    "bust": "B",
+    "notification_date": "2026-02-11 16:12:38",
+    "collected_at": "2026-02-13T00:56:28.672Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62284?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62284?openExternalBrowser=1",
+    "name": "佐藤しずく",
+    "age": "21",
+    "height": "153",
+    "bust": "F",
+    "notification_date": "2026-02-11 15:31:38",
+    "collected_at": "2026-02-13T00:56:28.672Z",
+    "tweeted_at": null
+  },
+  {
+    "id": "https://delice.love/movie/62283?openExternalBrowser=1",
+    "link": "https://delice.love/movie/62283?openExternalBrowser=1",
+    "name": "はる",
+    "age": "30",
+    "height": "146",
+    "bust": "D",
+    "notification_date": "2026-02-11 15:17:44",
+    "collected_at": "2026-02-13T00:56:28.672Z",
+    "tweeted_at": null
   }
 ]
